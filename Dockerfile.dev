@@ -1,0 +1,20 @@
+# Frontend
+FROM oven/bun:alpine AS frontend-dev-base
+WORKDIR /app/frontend/
+RUN mkdir -p /temp
+COPY frontend/ ./
+RUN bun install --frozen-lockfile
+
+FROM frontend-dev-base AS frontend-dev
+EXPOSE 5173
+ENTRYPOINT ["bun", "run", "dev"]
+
+# Backend
+FROM golang:alpine AS go-with-air
+RUN go install github.com/air-verse/air@latest
+
+FROM go-with-air AS backend-dev
+WORKDIR /app/backend/
+COPY backend/ ./
+EXPOSE 8080
+ENTRYPOINT ["air"]

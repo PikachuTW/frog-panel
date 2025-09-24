@@ -1,0 +1,8 @@
+{
+    "$schema": "https://inlang.com/schema/inlang-message-format",
+    "hello_world": "Hello, {name} from zh-tw!",
+    "add_instance": "新增實例",
+    "settings": "​設定",
+    "help": "幫助",
+    "mod_loader": "模組啟動器"
+}

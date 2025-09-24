@@ -1,0 +1,93 @@
+ARG GO_VERSION=1.25
+
+# Frontend dev
+FROM oven/bun:alpine AS frontend-base
+WORKDIR /app/frontend/
+RUN mkdir -p /temp/dev
+COPY frontend/package.json frontend/bun.lock /temp/dev/
+RUN cd /temp/dev/ && bun install --frozen-lockfile
+COPY frontend/ ./
+EXPOSE 5173
+CMD ["bun", "run", "dev"]
+
+# Frontend prod
+FROM oven/bun:alpine AS frontend-prod-deps
+WORKDIR /app/frontend/
+COPY frontend/package.json frontend/bun.lock /temp/prod/
+RUN bun install --production --frozen-lockfile
+
+# Stage 3: Frontend production build (with dev dependencies for build tools)
+FROM frontend-base AS frontend-build
+COPY frontend/ ./
+RUN bun run build
+
+# Stage 3b: Frontend production runtime (minimal dependencies)
+FROM frontend-prod-deps AS frontend-runtime
+COPY --from=frontend-build /app/frontend/build ./build
+
+# Stage 4: Backend build base
+FROM golang:${GO_VERSION}-alpine AS backend-base
+RUN apk add --no-cache git ca-certificates
+WORKDIR /app/backend
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+# Stage 5: Backend development
+FROM backend-base AS backend-dev
+RUN go install github.com/air-verse/air@latest
+COPY backend/ ./
+EXPOSE 8080
+CMD ["air", "-c", ".air.toml"]
+
+# Stage 6: Backend production build
+FROM backend-base AS backend-build
+COPY backend/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/...
+
+# Stage 7: Production runtime (optimized minimal image)
+FROM alpine:latest AS production
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+
+# Copy backend binary
+COPY --from=backend-build /app/backend/main .
+
+# Copy frontend build (from optimized build stage)
+COPY --from=frontend-build /app/frontend/build ./static
+
+# Expose ports
+EXPOSE 8080
+
+# Run backend (which should serve frontend static files)
+CMD ["./main"]
+
+# Stage 8: Development environment (optional full-stack dev)
+FROM oven/bun:${BUN_VERSION}-alpine AS development
+RUN apk add --no-cache go git ca-certificates
+
+# Setup Go
+ENV GO_VERSION=${GO_VERSION}
+RUN wget -O go.tar.gz "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+WORKDIR /app
+
+# Install Go air for hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Copy and install dependencies
+COPY frontend/package.json frontend/bun.lockb* ./frontend/
+COPY backend/go.mod backend/go.sum ./backend/
+RUN cd frontend && bun install --frozen-lockfile
+RUN cd backend && go mod download
+
+# Copy source code
+COPY . .
+
+# Expose ports for both services
+EXPOSE 5173 8080
+
+# Default to running both services (you can override this)
+CMD ["sh", "-c", "cd backend && air -c .air.toml & cd frontend && bun run dev"]

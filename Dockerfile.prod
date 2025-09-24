@@ -1,0 +1,11 @@
+# Frontend install
+FROM oven/bun:alpine AS frontend-prod
+WORKDIR /app/frontend/
+RUN mkdir -p /temp
+COPY frontend/package.json frontend/bun.lock /temp/
+RUN cd /temp/ && bun install --production --frozen-lockfile
+COPY frontend/ ./
+RUN bun --bun run build
+EXPOSE 3000
+ENTRYPOINT [ "bun build/index.js" ]
+
