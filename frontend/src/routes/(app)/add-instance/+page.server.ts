@@ -1,7 +1,8 @@
+import { api } from '$lib/api/client';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({fetch}) => {
+export const load: PageServerLoad = async () => {
     return {
-        versionTypes: ['fabric', 'vanilla'],
+        versionTypes: (await api.GET('/info/version-types')).data ?? [],
     };
 };

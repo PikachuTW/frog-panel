@@ -1,28 +1,15 @@
 package main
 
 import (
-	"frog-panel/internal/api"
+	"frog-panel/internal/routes"
+
+	"github.com/go-fuego/fuego"
 )
 
-type Version struct {
-	Stable  bool   `json:"stable"`
-	Version string `json:"version"`
-}
-
 func main() {
-	router := api.New()
+	s := fuego.NewServer()
 
-	err := router.Run()
+	routes.SetupRoutes(s)
 
-	if err != nil {
-		panic(err)
-	}
-
-	// client := client.New()
-	// var data []Version
-	// client.GetJSON("https://meta.fabricmc.net/v2/versions/game", &data)
-	// data = slices.DeleteFunc(data, func(version Version) bool {
-	// 	return !version.Stable
-	// })
-	// fmt.Println(data)
+	s.Run()
 }

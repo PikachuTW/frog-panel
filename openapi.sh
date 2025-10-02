@@ -1,0 +1,1 @@
+bunx openapi-typescript backend/doc/openapi.json -o frontend/src/lib/api/schema.d.ts

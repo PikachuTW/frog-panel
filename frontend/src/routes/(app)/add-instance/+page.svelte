@@ -6,12 +6,6 @@
 
 	const mcTypes = data.versionTypes;
 	let modLoader = $state(mcTypes[0]);
-	let selectedVersion = $state(null);
-
-	// const mcVersions = $derived.by(async () => {
-	// 	const res = await (await fetch(`/api/versions/${modLoader}`)).json();
-	// 	return res;
-	// });
 </script>
 
 <div class="px-8">
